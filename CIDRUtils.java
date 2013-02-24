@@ -25,6 +25,7 @@
 
 package edazdarevic.commons.net;
 
+import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -58,13 +59,36 @@ public class CIDRUtils {
             inetAddress = InetAddress.getByName(addressPart);
 
             prefixLength = Integer.parseInt(networkPart);
+
             if (inetAddress.getAddress().length == 4)
                 calculateIpv4();
             else
-                calculateIpv6();
+                calculateIpv6BigInt();
         } else {
             throw new IllegalArgumentException("not an valid CIDR format!");
         }
+    }
+
+
+    private void calculateIpv6BigInt() throws UnknownHostException {
+
+        ByteBuffer maxLong = ByteBuffer.allocate(16)
+                .putLong(Long.MAX_VALUE)
+                .putLong(Long.MAX_VALUE);
+
+
+        BigInteger mask = (new BigInteger(maxLong.array())).not().shiftRight(prefixLength - 1);
+
+        ByteBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress());
+
+        BigInteger ipValue = new BigInteger(buffer.array());
+
+        BigInteger startIp = ipValue.and(mask);
+        BigInteger endIp = startIp.add((mask.not()));
+
+
+        this.startAddress = InetAddress.getByAddress(startIp.toByteArray());
+        this.endAddress = InetAddress.getByAddress(endIp.toByteArray());
     }
 
 
@@ -86,49 +110,6 @@ public class CIDRUtils {
 
     }
 
-    private void calculateIpv6() throws UnknownHostException {
-        LongBuffer buffer = ByteBuffer.wrap(this.inetAddress.getAddress()).order(ByteOrder.BIG_ENDIAN).asLongBuffer();
-        long first8bytes = buffer.get(0);
-
-        long startAddrHi;
-        long startAddrLo;
-
-        long endAddrHi;
-        long endAddrLo;
-
-        if (prefixLength > 64) {
-            long mask = ~(Long.MAX_VALUE) >> ((prefixLength - 64) - 1);
-            long second8bytes = buffer.get(1);
-
-            startAddrHi = first8bytes;
-            startAddrLo = second8bytes & mask;
-
-            endAddrHi = first8bytes;
-            endAddrLo = startAddrLo + (~mask);
-
-        } else {
-            long mask = ~(Long.MAX_VALUE) >> (prefixLength - 1);
-
-            startAddrHi = first8bytes & mask;
-            startAddrLo = 0;
-
-            endAddrHi = startAddrHi + ~(mask);
-            endAddrLo = -1;
-
-        }
-
-        ByteBuffer startFinal = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN)
-                .putLong(startAddrHi)
-                .putLong(startAddrLo);
-
-        ByteBuffer endFinal = ByteBuffer.allocate(16).order(ByteOrder.BIG_ENDIAN)
-                .putLong(endAddrHi)
-                .putLong(endAddrLo);
-
-        this.startAddress = InetAddress.getByAddress(startFinal.array());
-        this.endAddress = InetAddress.getByAddress(endFinal.array());
-    }
-
     public String getNetworkAddress() {
 
         return this.startAddress.getHostAddress();
@@ -136,5 +117,17 @@ public class CIDRUtils {
 
     public String getBroadcastAddress() {
         return this.endAddress.getHostAddress();
+    }
+
+    public boolean isInRange(String ipAddress) throws UnknownHostException {
+        InetAddress address = InetAddress.getByName(ipAddress);
+        BigInteger start = new BigInteger(this.startAddress.getAddress());
+        BigInteger end = new BigInteger(this.endAddress.getAddress());
+        BigInteger target = new BigInteger(address.getAddress());
+
+        int st = start.compareTo(target);
+        int te = target.compareTo(end);
+
+        return (st == -1 || st == 0) && (te == -1 || te == 0);
     }
 }
