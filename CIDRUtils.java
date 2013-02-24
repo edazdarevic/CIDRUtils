@@ -63,14 +63,14 @@ public class CIDRUtils {
             if (inetAddress.getAddress().length == 4)
                 calculateIpv4();
             else
-                calculateIpv6BigInt();
+                calculateIpv6();
         } else {
             throw new IllegalArgumentException("not an valid CIDR format!");
         }
     }
 
 
-    private void calculateIpv6BigInt() throws UnknownHostException {
+    private void calculateIpv6() throws UnknownHostException {
 
         ByteBuffer maxLong = ByteBuffer.allocate(16)
                 .putLong(Long.MAX_VALUE)
