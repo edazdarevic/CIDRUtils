@@ -85,15 +85,10 @@ public class CIDRUtils {
         BigInteger mask = (new BigInteger(1, maskBuffer.array())).not().shiftRight(prefixLength);
 
         ByteBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress());
-
         BigInteger ipVal = new BigInteger(1, buffer.array());
-
 
         BigInteger startIp = ipVal.and(mask);
         BigInteger endIp = startIp.add(mask.not());
-
-        System.out.println("Start number : " + startIp);
-        System.out.println("End number : " + endIp);
 
         byte[] startIpArr = toBytes(startIp.toByteArray(), targetSize);
         byte[] endIpArr = toBytes(endIp.toByteArray(), targetSize);
