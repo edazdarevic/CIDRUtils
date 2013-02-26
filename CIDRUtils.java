@@ -29,9 +29,8 @@ import java.math.BigInteger;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.nio.ByteOrder;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * A class that enables to get an IP range from CIDR specification. It supports
@@ -57,57 +56,72 @@ public class CIDRUtils {
             String networkPart = this.cidr.substring(index + 1);
 
             inetAddress = InetAddress.getByName(addressPart);
-
             prefixLength = Integer.parseInt(networkPart);
 
-            if (inetAddress.getAddress().length == 4)
-                calculateIpv4();
-            else
-                calculateIpv6();
+            calculate();
         } else {
             throw new IllegalArgumentException("not an valid CIDR format!");
         }
     }
 
 
-    private void calculateIpv6() throws UnknownHostException {
+    private void calculate() throws UnknownHostException {
 
-        ByteBuffer maxLong = ByteBuffer.allocate(16)
-                .putLong(Long.MAX_VALUE)
-                .putLong(Long.MAX_VALUE);
+        ByteBuffer maskBuffer;
+        int targetSize;
+        if (inetAddress.getAddress().length == 4) {
+            maskBuffer =
+                    ByteBuffer
+                            .allocate(4)
+                            .putInt(-1);
+            targetSize = 4;
+        } else {
+            maskBuffer = ByteBuffer.allocate(16)
+                    .putLong(-1L)
+                    .putLong(-1L);
+            targetSize = 16;
+        }
 
-
-        BigInteger mask = (new BigInteger(maxLong.array())).not().shiftRight(prefixLength - 1);
+        BigInteger mask = (new BigInteger(1, maskBuffer.array())).not().shiftRight(prefixLength);
 
         ByteBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress());
 
-        BigInteger ipValue = new BigInteger(buffer.array());
-
-        BigInteger startIp = ipValue.and(mask);
-        BigInteger endIp = startIp.add((mask.not()));
+        BigInteger ipVal = new BigInteger(1, buffer.array());
 
 
-        this.startAddress = InetAddress.getByAddress(startIp.toByteArray());
-        this.endAddress = InetAddress.getByAddress(endIp.toByteArray());
+        BigInteger startIp = ipVal.and(mask);
+        BigInteger endIp = startIp.add(mask.not());
+
+        System.out.println("Start number : " + startIp);
+        System.out.println("End number : " + endIp);
+
+        byte[] startIpArr = toBytes(startIp.toByteArray(), targetSize);
+        byte[] endIpArr = toBytes(endIp.toByteArray(), targetSize);
+
+        this.startAddress = InetAddress.getByAddress(startIpArr);
+        this.endAddress = InetAddress.getByAddress(endIpArr);
+
     }
 
+    private byte[] toBytes(byte[] array, int targetSize) {
+        int counter = 0;
+        List<Byte> newArr = new ArrayList<Byte>();
+        while (counter < targetSize && (array.length - 1 - counter >= 0)) {
+            newArr.add(0, array[array.length - 1 - counter]);
+            counter++;
+        }
 
-    private void calculateIpv4() throws UnknownHostException {
-        int mask = ~((0x7fffffff) >> (prefixLength - 1));
+        int size = newArr.size();
+        for (int i = 0; i < (targetSize - size); i++) {
 
-        IntBuffer buffer = ByteBuffer.wrap(inetAddress.getAddress()).asIntBuffer();
+            newArr.add(0, (byte) 0);
+        }
 
-        int ipValue = buffer.get();
-
-        int startIp = ipValue & mask;
-        int endIp = startIp + ~(mask);
-
-        ByteBuffer startFinal = ByteBuffer.allocate(4).putInt(startIp);
-        ByteBuffer endFinal = ByteBuffer.allocate(4).putInt(endIp);
-
-        this.startAddress = InetAddress.getByAddress(startFinal.array());
-        this.endAddress = InetAddress.getByAddress(endFinal.array());
-
+        byte[] ret = new byte[newArr.size()];
+        for (int i = 0; i < newArr.size(); i++) {
+            ret[i] = newArr.get(i);
+        }
+        return ret;
     }
 
     public String getNetworkAddress() {
@@ -121,9 +135,9 @@ public class CIDRUtils {
 
     public boolean isInRange(String ipAddress) throws UnknownHostException {
         InetAddress address = InetAddress.getByName(ipAddress);
-        BigInteger start = new BigInteger(this.startAddress.getAddress());
-        BigInteger end = new BigInteger(this.endAddress.getAddress());
-        BigInteger target = new BigInteger(address.getAddress());
+        BigInteger start = new BigInteger(1, this.startAddress.getAddress());
+        BigInteger end = new BigInteger(1, this.endAddress.getAddress());
+        BigInteger target = new BigInteger(1, address.getAddress());
 
         int st = start.compareTo(target);
         int te = target.compareTo(end);
