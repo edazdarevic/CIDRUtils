@@ -60,7 +60,7 @@ public class CIDRUtils {
 
             calculate();
         } else {
-            throw new IllegalArgumentException("not an valid CIDR format!");
+            throw new IllegalArgumentException("not a valid CIDR format!");
         }
     }
 
