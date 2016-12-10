@@ -32,7 +32,6 @@ import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import javax.annotation.Nonnull;
 
@@ -40,13 +39,13 @@ import javax.annotation.Nonnull;
  * A class that enables to get an IP range from CIDR specification. It supports
  * both IPv4 and IPv6.
  */
-public class CIDRUtils {
-    private final static int MAXPREFIX_V4 = 32;
-    private final static int MAXPREFIX_V6 = 128;
-    private final static String ILLEGAL_ARGUMENT_MSG = "Not a valid CIDR format!";
-    private final static String INVALID_EMPTY = "Invalid empty address!";
-
-    private final String cidr;
+public final class CIDRUtils {
+    private static final int ADDRSIZE_V4 = 4;
+    private static final int ADDRSIZE_V6 = 16;
+    private static final int MAXPREFIX_V4 = 32;
+    private static final int MAXPREFIX_V6 = 128;
+    private static final String ILLEGAL_ARGUMENT_MSG = "Not a valid CIDR format!";
+    private static final String INVALID_EMPTY = "Invalid empty address!";
 
     private InetAddress inetAddress;
     private InetAddress startAddress;
@@ -58,25 +57,24 @@ public class CIDRUtils {
      * Creates a new instance.
      *
      * @param cidr A string, conatining the address/prefix expression.
-     * @throws IllegalArgumentException if cidr is malformed or the prefix is not within bounds of a valid address prefix.
+     * @throws IllegalArgumentException if cidr is malformed or the prefix is not within bounds of
+     *   a valid address prefix.
      * @throws UnknownHostException if the address part does not contain a valid address.
      */
     public CIDRUtils(@Nonnull final String cidr) throws UnknownHostException {
 
-        this.cidr = cidr;
-
         /* split CIDR to address and prefix part */
-        if (this.cidr.contains("/")) {
-            int index = this.cidr.indexOf("/");
-            String addressPart = this.cidr.substring(0, index);
-            String networkPart = this.cidr.substring(index + 1);
+        if (cidr.contains("/")) {
+            int index = cidr.indexOf("/");
+            String addressPart = cidr.substring(0, index);
+            String networkPart = cidr.substring(index + 1);
             if (addressPart.isEmpty()) {
                 throw new UnknownHostException(INVALID_EMPTY);
             }
             inetAddress = InetAddress.getByName(addressPart);
             prefixLength = Integer.parseInt(networkPart);
-            if (prefixLength < 1 || prefixLength > MAXPREFIX_V6 ||
-                    (prefixLength > MAXPREFIX_V4 && inetAddress.getAddress().length == 4)) {
+            if (prefixLength < 1 || prefixLength > MAXPREFIX_V6
+                    || prefixLength > MAXPREFIX_V4 && inetAddress.getAddress().length == ADDRSIZE_V4) {
                 throw new IllegalArgumentException(ILLEGAL_ARGUMENT_MSG);
             }
             calculate();
@@ -90,17 +88,12 @@ public class CIDRUtils {
 
         ByteBuffer maskBuffer;
         int targetSize;
-        if (inetAddress.getAddress().length == 4) {
-            maskBuffer =
-                ByteBuffer
-                .allocate(4)
-                .putInt(-1);
-            targetSize = 4;
+        if (inetAddress.getAddress().length == ADDRSIZE_V4) {
+            maskBuffer = ByteBuffer.allocate(ADDRSIZE_V4).putInt(-1);
+            targetSize = ADDRSIZE_V4;
         } else {
-            maskBuffer = ByteBuffer.allocate(16)
-                .putLong(-1L)
-                .putLong(-1L);
-            targetSize = 16;
+            maskBuffer = ByteBuffer.allocate(ADDRSIZE_V6).putLong(-1L).putLong(-1L);
+            targetSize = ADDRSIZE_V6;
         }
 
         BigInteger mask = new BigInteger(1, maskBuffer.array()).not().shiftRight(prefixLength);
@@ -119,7 +112,7 @@ public class CIDRUtils {
 
     }
 
-    private byte[] toBytes(byte[] array, int targetSize) {
+    private byte[] toBytes(final byte[] array, final int targetSize) {
         int counter = 0;
         List<Byte> newArr = new ArrayList<Byte>();
         while (counter < targetSize && array.length - 1 - counter >= 0) {
@@ -144,7 +137,8 @@ public class CIDRUtils {
      * Fetches the network address of this instance.
      * @return The network address as a string.
      */
-    public @Nonnull String getNetworkAddress() {
+    @Nonnull
+    public String getNetworkAddress() {
 
         return this.startAddress.getHostAddress();
     }
@@ -153,11 +147,12 @@ public class CIDRUtils {
      * Fetches the broadcast address of this instance.
      * @return The broadcast address as a string.
      */
-    public @Nonnull String getBroadcastAddress() {
+    @Nonnull
+    public String getBroadcastAddress() {
         return this.endAddress.getHostAddress();
     }
 
-    private boolean isInRange(@Nonnull final String ipAddress, boolean broadcastOk) throws UnknownHostException {
+    private boolean isInRange(@Nonnull final String ipAddress, final boolean broadcastOk) throws UnknownHostException {
         if (ipAddress.isEmpty()) {
                 throw new UnknownHostException(INVALID_EMPTY);
         }
@@ -169,7 +164,7 @@ public class CIDRUtils {
         int st = start.compareTo(target);
         int te = target.compareTo(end);
 
-        return (st == -1 || st == 0) && (te == -1 || (te == 0 && broadcastOk));
+        return (st == -1 || st == 0) && (te == -1 || te == 0 && broadcastOk);
     }
 
     /**
