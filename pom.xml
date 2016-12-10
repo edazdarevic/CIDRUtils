@@ -30,9 +30,9 @@
   </developers>
 
   <scm>
-    <connection>scm:git:https://github.com/felfert/CIDRUtils.git</connection>
+    <connection>scm:git:git://github.com/felfert/CIDRUtils.git</connection>
     <developerConnection>scm:git:git@github.com:felfert/CIDRUtils.git</developerConnection>
-    <url>http://github.com/jenkinsci/jclouds-plugin</url>
+    <url>http://github.com/felfert/CIDRUtils</url>
     <tag>HEAD</tag>
   </scm>
 
