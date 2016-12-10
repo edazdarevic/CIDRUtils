@@ -45,13 +45,126 @@ public final class CIDRUtils {
     private static final int MAXPREFIX_V4 = 32;
     private static final int MAXPREFIX_V6 = 128;
     private static final String ILLEGAL_ARGUMENT_MSG = "Not a valid CIDR format!";
-    private static final String INVALID_EMPTY = "Invalid empty address!";
+    private static final String INVALID_EMPTY_ADDR = "Invalid empty address!";
+    private static final String INVALID_ADDR = "Invalid address!";
 
     private InetAddress inetAddress;
     private InetAddress startAddress;
     private InetAddress endAddress;
     private final int prefixLength;
 
+    private static boolean isValidV4(@Nonnull final String addr) {
+        final String[] parts = addr.split("\\.", -1);
+        if (parts.length != 4) {
+            return false;
+        }
+        try {
+            for (String part : parts) {
+                final int val = Integer.parseInt(part);
+                if (val < 0 || val > 255) {
+                    return false;
+                }
+            }
+        } catch (NumberFormatException x) {
+            return false;
+        }
+        return true;
+    }
+
+    // Manually modelled in Java after Paul Vixie's C implementation at
+    // https://sourceware.org/git/?p=glibc.git;a=blob_plain;f=resolv/inet_pton.c;hb=HEAD
+    // which in turn was inspired by Mark Andrews.
+    private static boolean isValidV6(final String addr) {
+        if (addr.length() < 2) {
+            return false;
+        }
+
+        final char[] ca = addr.toCharArray();
+        final int calen = ca.length;
+
+        int i = 0;
+        if (ca[i] == ':'  && ca[++i] != ':') {
+            return false;
+        }
+        int curtok = i;
+        int colonp = -1;
+        boolean saw_xdigit = false;
+        int val = 0;
+        int sp = 0;
+        while (i < calen) {
+            final char ch = ca[i++];
+            final int chval = Character.digit(ch, 16);
+            if (chval != -1) {
+                val <<= 4;
+                val |= chval;
+                if (val > 0xffff) {
+                    return false;
+                }
+                saw_xdigit = true;
+                continue;
+            }
+            if (ch == ':') {
+                curtok = i;
+                if (!saw_xdigit) {
+                    if (colonp != -1) {
+                        return false;
+                    }
+                    colonp = sp;
+                    continue;
+                } else if (i == calen) {
+                    return false;
+                }
+                if (sp + 2 > ADDRSIZE_V6) {
+                    return false;
+                }
+                sp += 2;
+                saw_xdigit = false;
+                val = 0;
+                continue;
+            }
+            if (ch == '.' && (sp + ADDRSIZE_V4) <= ADDRSIZE_V6) {
+                if (!isValidV4(addr.substring(curtok, calen))) {
+                    return false;
+                }
+                sp += ADDRSIZE_V4;
+                saw_xdigit = false;
+                break;
+            } else {
+                return false;
+            }
+        }
+        if (saw_xdigit) {
+            if (sp + 2 > ADDRSIZE_V6) {
+                return false;
+            }
+            sp += 2;
+        }
+
+        if (colonp != -1) {
+            if (sp == ADDRSIZE_V6) {
+                return false;
+            }
+            sp = ADDRSIZE_V6;
+        }
+        if (sp != ADDRSIZE_V6) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Validates an IP address.
+     * @param addr The IP address to be validated.
+     * @throws UnknownHostException if the address does not contain a valid IPv4 or IPv6 address.
+     */
+    public static void validateIpAddress(final String addr) throws UnknownHostException {
+        if (addr.isEmpty()) {
+            throw new UnknownHostException(INVALID_EMPTY_ADDR);
+        }
+        if (!isValidV4(addr) && !isValidV6(addr)) {
+            throw new UnknownHostException(INVALID_ADDR);
+        }
+    }
 
     /**
      * Creates a new instance.
@@ -68,15 +181,13 @@ public final class CIDRUtils {
             int index = cidr.indexOf("/");
             String addressPart = cidr.substring(0, index);
             String networkPart = cidr.substring(index + 1);
-            if (addressPart.isEmpty()) {
-                throw new UnknownHostException(INVALID_EMPTY);
-            }
+            validateIpAddress(addressPart);
             inetAddress = InetAddress.getByName(addressPart);
             prefixLength = Integer.parseInt(networkPart);
             if (prefixLength < 1 || prefixLength > MAXPREFIX_V6
                     || prefixLength > MAXPREFIX_V4 && inetAddress.getAddress().length == ADDRSIZE_V4) {
                 throw new IllegalArgumentException(ILLEGAL_ARGUMENT_MSG);
-            }
+                    }
             calculate();
         } else {
             throw new IllegalArgumentException(ILLEGAL_ARGUMENT_MSG);
@@ -153,9 +264,7 @@ public final class CIDRUtils {
     }
 
     private boolean isInRange(@Nonnull final String ipAddress, final boolean broadcastOk) throws UnknownHostException {
-        if (ipAddress.isEmpty()) {
-                throw new UnknownHostException(INVALID_EMPTY);
-        }
+        validateIpAddress(ipAddress);
         InetAddress address = InetAddress.getByName(ipAddress);
         BigInteger start = new BigInteger(1, this.startAddress.getAddress());
         BigInteger end = new BigInteger(1, this.endAddress.getAddress());

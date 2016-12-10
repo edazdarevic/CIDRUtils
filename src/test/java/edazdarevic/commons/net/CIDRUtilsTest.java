@@ -27,6 +27,36 @@ import static org.junit.Assert.assertTrue;
 
 public class CIDRUtilsTest {
 
+    @Test(expected=UnknownHostException.class)
+    public void testInvalidAddr01() throws Exception {
+        CIDRUtils.validateIpAddress("1200::AB00:1234::2552:7777:1313");
+    }
+
+    @Test(expected=UnknownHostException.class)
+    public void testInvalidAddr02() throws Exception {
+        CIDRUtils.validateIpAddress(":2001:db8:0:1");
+    }
+
+    @Test(expected=UnknownHostException.class)
+    public void testInvalidAddr03() throws Exception {
+        CIDRUtils.validateIpAddress("2001:db8:0:1");
+    }
+
+    @Test(expected=UnknownHostException.class)
+    public void testInvalidAddr04() throws Exception {
+        CIDRUtils.validateIpAddress("12001:0000:1234:0000:0000:C1C0:ABCD:0876");
+    }
+
+    @Test
+    public void testValidAddr01() throws Exception {
+        CIDRUtils.validateIpAddress("::192.168.1.1");
+    }
+
+    @Test
+    public void testValidAddr02() throws Exception {
+        CIDRUtils.validateIpAddress("::1");
+    }
+
     @Test(expected=IllegalArgumentException.class)
     public void testEmptyArg() throws Exception {
         new CIDRUtils("");
