@@ -21,8 +21,9 @@ import org.junit.Test;
 import org.junit.Rule;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 
 public class CIDRUtilsTest {
 
@@ -56,14 +57,41 @@ public class CIDRUtilsTest {
         new CIDRUtils("::1/129");
     }
 
+    @Test(expected=UnknownHostException.class)
+    public void testInRangeInvalid1() throws Exception {
+        CIDRUtils cu = new CIDRUtils("192.168.1.2/24");
+        cu.isInRange("");
+    }
+
+    @Test(expected=UnknownHostException.class)
+    public void testInRangeInvalid2() throws Exception {
+        CIDRUtils cu = new CIDRUtils("192.168.1.2/24");
+        cu.isInHostsRange("");
+    }
+
     @Test
     public void testInRangeV4() throws Exception {
         CIDRUtils cu = new CIDRUtils("192.168.1.2/24");
+        assertNotNull(cu.getNetworkAddress());
+        assertNotNull(cu.getBroadcastAddress());
         assertEquals("Network address", cu.getNetworkAddress(), "192.168.1.0");
         assertEquals("Broadcast address", cu.getBroadcastAddress(), "192.168.1.255");
         assertTrue("In range", cu.isInRange("192.168.1.22"));
         assertTrue("In range", cu.isInRange("192.168.1.255"));
         assertTrue("In range", cu.isInHostsRange("192.168.1.254"));
         assertFalse("In range", cu.isInHostsRange("192.168.1.255"));
+    }
+
+    @Test
+    public void testInRangeV6() throws Exception {
+        CIDRUtils cu = new CIDRUtils("435:23f::45:23/101");
+        assertNotNull(cu.getNetworkAddress());
+        assertNotNull(cu.getBroadcastAddress());
+        assertEquals("Network address", cu.getNetworkAddress(), "435:23f:0:0:0:0:0:0");
+        assertEquals("Broadcast address", cu.getBroadcastAddress(), "435:23f:0:0:0:0:7ff:ffff");
+        assertTrue("In range", cu.isInRange("435:23f:0:0:0:0:0:1"));
+        assertTrue("In range", cu.isInRange("435:23f:0:0:0:0:7ff:ffff"));
+        assertTrue("In range", cu.isInHostsRange("435:23f:0:0:0:0:7ff:fffe"));
+        assertFalse("In range", cu.isInHostsRange("435:23f:0:0:0:0:7ff:ffff"));
     }
 }
