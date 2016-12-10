@@ -7,7 +7,7 @@
   <groupId>com.github.felfert</groupId>
   <artifactId>cidrutils</artifactId>
   <packaging>jar</packaging>
-  <version>1.0</version>
+  <version>1.1-SNAPSHOT</version>
   <name>cidrutils</name>
   <url>http://maven.apache.org</url>
 
@@ -32,7 +32,7 @@
     <connection>scm:git:git://github.com/felfert/CIDRUtils.git</connection>
     <developerConnection>scm:git:git@github.com:felfert/CIDRUtils.git</developerConnection>
     <url>http://github.com/felfert/CIDRUtils</url>
-    <tag>cidrutils-1.0</tag>
+    <tag>HEAD</tag>
   </scm>
 
   <properties>
