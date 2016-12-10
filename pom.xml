@@ -14,7 +14,7 @@
   <groupId>com.github.felfert</groupId>
   <artifactId>cidrutils</artifactId>
   <packaging>jar</packaging>
-  <version>1.1-SNAPSHOT</version>
+  <version>1.1</version>
   <name>CIDRUtils</name>
   <url>http://github.com/felfert/CIDRUtils</url>
 
@@ -39,7 +39,7 @@
     <connection>scm:git:git://github.com/felfert/CIDRUtils.git</connection>
     <developerConnection>scm:git:git@github.com:felfert/CIDRUtils.git</developerConnection>
     <url>http://github.com/felfert/CIDRUtils</url>
-    <tag>HEAD</tag>
+    <tag>cidrutils-1.1</tag>
   </scm>
 
   <properties>
