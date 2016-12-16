@@ -3,6 +3,7 @@ CIDRUtils
 
 This is a mavenized and improved version of the original. See forked link.
 CIDRUtils is a Java library that enables you to get an IP range from CIDR specification. It supports both IPv4 and IPv6.
+CIDRUtils is also distributed via [maven central](http://search.maven.org/#search%7Cga%7C1%7Ccidrutils).
 
 ###IPv4 Example 
 <pre>
