@@ -75,7 +75,16 @@
 
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
-      </plugin>
+        <executions>
+            <execution>
+              <id>validate</id>
+              <phase>validate</phase>
+              <configuration>
+                <configLocation>google_checks_custom.xml</configLocation>
+              </configuration>
+            </execution>
+          </executions>
+        </plugin>
 
       <plugin>
         <artifactId>maven-source-plugin</artifactId>
